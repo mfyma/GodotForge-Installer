@@ -16,36 +16,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Import Android project from ZIP
+      - name: Repair Gradle wrapper JAR
         shell: bash
         run: |
           set -euo pipefail
+          curl -fsSL             https://raw.githubusercontent.com/gradle/gradle/v8.9.0/gradle/wrapper/gradle-wrapper.jar             -o gradle/wrapper/gradle-wrapper.jar
 
-          if [[ -f GodotForge_Installer.zip ]]; then
-            rm -rf /tmp/godotforge-import
-            mkdir -p /tmp/godotforge-import
-            unzip -q GodotForge_Installer.zip -d /tmp/godotforge-import
-
-            if [[ -d /tmp/godotforge-import/GodotForge_Installer ]]; then
-              SOURCE=/tmp/godotforge-import/GodotForge_Installer
-            else
-              SOURCE=/tmp/godotforge-import
-            fi
-
-            # Keep the workflow already stored in the repository.
-            # GitHub's workflow token is not allowed to create another workflow file.
-            rm -rf "$SOURCE/.git" "$SOURCE/.github"
-
-            shopt -s dotglob nullglob
-            cp -a "$SOURCE"/* .
-            rm -f GodotForge_Installer.zip
-
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Import complete Android project" || true
-            git push
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gradle/wrapper/gradle-wrapper.jar
+          git commit -m "Repair Gradle wrapper JAR" || true
+          git push
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
