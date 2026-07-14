@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GodotForge Installer</string>
+    <string name="hero_title">تثبيت إضافة GodotForge AI</string>
+    <string name="hero_description">اختر المجلد الجذر لمشروع Godot. يتحقق التطبيق من وجود project.godot، ثم يكتب فقط داخل addons/godotforge_ai.</string>
+    <string name="selected_folder_label">مجلد المشروع المحدد</string>
+    <string name="no_folder_selected">لم يتم اختيار مجلد</string>
+    <string name="choose_folder">اختيار مشروع Godot</string>
+    <string name="recheck">إعادة الفحص</string>
+    <string name="install_addon">تثبيت الإضافة</string>
+    <string name="reinstall_addon">نسخ احتياطي وإعادة التثبيت</string>
+    <string name="security_note">دون Root · دون صلاحية تخزين شاملة · دون مفاتيح API مضمّنة</string>
+
+    <string name="status_choose_folder">اختر مجلد مشروع Godot للبدء.</string>
+    <string name="status_checking">جارٍ فحص المجلد المحدد…</string>
+    <string name="status_valid_project">تم العثور على مشروع Godot صالح. جاهز للتثبيت.</string>
+    <string name="status_valid_existing">تم العثور على مشروع صالح، والإضافة موجودة مسبقًا. ستُنشأ نسخة احتياطية قبل إعادة التثبيت.</string>
+    <string name="status_invalid_tree">الموقع المحدد ليس مجلدًا متاحًا للتطبيق.</string>
+    <string name="status_missing_project_file">لم يُعثر على project.godot مباشرة داخل المجلد المحدد.</string>
+    <string name="status_not_writable">المجلد المحدد للقراءة فقط. اختر مجلد مشروع قابلًا للكتابة.</string>
+    <string name="status_addons_is_file">يوجد ملف باسم addons يمنع التثبيت. أعد تسميته يدويًا ثم أعد الفحص.</string>
+    <string name="status_target_is_file">يوجد ملف باسم addons/godotforge_ai يمنع التثبيت. أعد تسميته يدويًا؛ التطبيق لن يحذفه.</string>
+    <string name="status_access_revoked">أُلغي الوصول إلى المجلد. اختر مجلد المشروع من جديد.</string>
+    <string name="status_unknown_error">تعذر فحص المشروع: %1$s</string>
+    <string name="status_permission_failed">لم يمنح Android وصولًا دائمًا للقراءة والكتابة إلى هذا المجلد.</string>
+    <string name="status_installing">جارٍ تثبيت الإضافة…</string>
+    <string name="status_install_success">تم تثبيت الإضافة بنجاح. فعّلها في Godot من إعدادات المشروع &gt; الإضافات.</string>
+    <string name="status_install_success_with_backup">أُعيد تثبيت الإضافة بنجاح. أُنشئت النسخة الاحتياطية في addons/%1$s.</string>
+    <string name="status_confirmation_required">تتطلب إعادة التثبيت تأكيدًا لأن ملفات الإضافة الحالية ستُستبدل بعد إنشاء النسخة الاحتياطية.</string>
+    <string name="status_install_failed">فشل التثبيت: %1$s</string>
+    <string name="unknown_error">خطأ غير معروف</string>
+
+    <string name="replace_dialog_title">إعادة تثبيت الإضافة الحالية؟</string>
+    <string name="replace_dialog_message">سينسخ التطبيق أولًا مجلد addons/godotforge_ai الحالي إلى نسخة احتياطية مؤرخة داخل addons، ثم يستبدل ملفات الإضافة التي يديرها. لن تُحذف الملفات الإضافية.</string>
+    <string name="backup_and_replace">نسخ احتياطي وإعادة التثبيت</string>
+    <string name="cancel">إلغاء</string>
+</resources>

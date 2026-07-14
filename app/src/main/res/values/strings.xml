@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GodotForge Installer</string>
+    <string name="hero_title">Install the GodotForge AI addon</string>
+    <string name="hero_description">Select the root folder of a Godot project. The installer verifies project.godot, then writes only inside addons/godotforge_ai.</string>
+    <string name="selected_folder_label">Selected project folder</string>
+    <string name="no_folder_selected">No folder selected</string>
+    <string name="choose_folder">Choose Godot project</string>
+    <string name="recheck">Recheck</string>
+    <string name="install_addon">Install addon</string>
+    <string name="reinstall_addon">Back up and reinstall</string>
+    <string name="security_note">No root access · No broad storage permission · No API keys bundled</string>
+
+    <string name="status_choose_folder">Choose a Godot project folder to begin.</string>
+    <string name="status_checking">Checking the selected folder…</string>
+    <string name="status_valid_project">Valid Godot project found. Ready to install.</string>
+    <string name="status_valid_existing">Valid Godot project found. The addon already exists; reinstalling will create a backup first.</string>
+    <string name="status_invalid_tree">The selected location is not an accessible folder.</string>
+    <string name="status_missing_project_file">project.godot was not found directly inside the selected folder.</string>
+    <string name="status_not_writable">The selected folder is read-only. Choose a writable project folder.</string>
+    <string name="status_addons_is_file">A file named addons blocks installation. Rename it manually, then recheck.</string>
+    <string name="status_target_is_file">A file named addons/godotforge_ai blocks installation. Rename it manually; the installer will not delete it.</string>
+    <string name="status_access_revoked">Folder access was revoked. Choose the project folder again.</string>
+    <string name="status_unknown_error">Could not inspect the project: %1$s</string>
+    <string name="status_permission_failed">Android did not grant persistent read/write access to this folder.</string>
+    <string name="status_installing">Installing the addon…</string>
+    <string name="status_install_success">Addon installed successfully. Enable it in Godot under Project Settings &gt; Plugins.</string>
+    <string name="status_install_success_with_backup">Addon reinstalled successfully. Backup created at addons/%1$s.</string>
+    <string name="status_confirmation_required">Reinstallation requires confirmation because an existing addon will be overwritten after backup.</string>
+    <string name="status_install_failed">Installation failed: %1$s</string>
+    <string name="unknown_error">Unknown error</string>
+
+    <string name="replace_dialog_title">Reinstall existing addon?</string>
+    <string name="replace_dialog_message">The installer will first copy the existing addons/godotforge_ai folder to a timestamped backup inside addons, then overwrite the managed addon files. Extra files are not deleted.</string>
+    <string name="backup_and_replace">Back up and reinstall</string>
+    <string name="cancel">Cancel</string>
+</resources>
