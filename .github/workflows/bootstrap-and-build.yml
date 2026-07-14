@@ -20,6 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           if [[ -f GodotForge_Installer.zip ]]; then
             rm -rf /tmp/godotforge-import
             mkdir -p /tmp/godotforge-import
@@ -30,6 +31,10 @@ jobs:
             else
               SOURCE=/tmp/godotforge-import
             fi
+
+            # Keep the workflow already stored in the repository.
+            # GitHub's workflow token is not allowed to create another workflow file.
+            rm -rf "$SOURCE/.git" "$SOURCE/.github"
 
             shopt -s dotglob nullglob
             cp -a "$SOURCE"/* .
@@ -46,7 +51,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: gradle
 
       - name: Validate Gradle wrapper
