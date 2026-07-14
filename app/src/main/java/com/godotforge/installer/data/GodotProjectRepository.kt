@@ -8,7 +8,11 @@ import com.godotforge.installer.domain.AddonManifest
 import com.godotforge.installer.domain.InspectionCode
 import com.godotforge.installer.domain.InstallResult
 import com.godotforge.installer.domain.ProjectInspection
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.Files
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,9 +57,62 @@ class GodotProjectRepository(private val context: Context) {
 
             val addonExists = target?.isDirectory == true
             ProjectInspection(
-                code = if (addonExists) InspectionCode.VALID_EXISTING else InspectionCode.VALID_NEW,
+                code = if (addonExists) {
+                    InspectionCode.VALID_EXISTING
+                } else {
+                    InspectionCode.VALID_NEW
+                },
                 displayName = displayName,
                 addonExists = addonExists,
+            )
+        } catch (error: SecurityException) {
+            ProjectInspection(
+                code = InspectionCode.ACCESS_REVOKED,
+                technicalMessage = error.message,
+            )
+        } catch (error: Exception) {
+            ProjectInspection(
+                code = InspectionCode.UNKNOWN_ERROR,
+                technicalMessage = error.message,
+            )
+        }
+    }
+
+    fun inspect(rootDirectory: File): ProjectInspection {
+        return try {
+            val root = rootDirectory.canonicalFile
+            val displayName = root.name.ifBlank { root.absolutePath }
+            if (!root.exists() || !root.isDirectory) {
+                return ProjectInspection(InspectionCode.INVALID_TREE, displayName)
+            }
+
+            val projectMarker = safeChild(root, AddonManifest.PROJECT_MARKER)
+            if (!projectMarker.isFile) {
+                return ProjectInspection(InspectionCode.MISSING_PROJECT_FILE, displayName)
+            }
+
+            if (!root.canRead() || !root.canWrite()) {
+                return ProjectInspection(InspectionCode.NOT_WRITABLE, displayName)
+            }
+
+            val addons = safeChild(root, AddonManifest.ADDONS_DIRECTORY)
+            if (addons.exists() && !addons.isDirectory) {
+                return ProjectInspection(InspectionCode.ADDONS_PATH_IS_FILE, displayName)
+            }
+
+            val target = safeChild(addons, AddonManifest.TARGET_DIRECTORY)
+            if (target.exists() && !target.isDirectory) {
+                return ProjectInspection(InspectionCode.TARGET_PATH_IS_FILE, displayName)
+            }
+
+            ProjectInspection(
+                code = if (target.isDirectory) {
+                    InspectionCode.VALID_EXISTING
+                } else {
+                    InspectionCode.VALID_NEW
+                },
+                displayName = displayName,
+                addonExists = target.isDirectory,
             )
         } catch (error: SecurityException) {
             ProjectInspection(
@@ -82,7 +139,9 @@ class GodotProjectRepository(private val context: Context) {
             val addons = ensureDirectory(root, AddonManifest.ADDONS_DIRECTORY)
             val existingTarget = addons.findFile(AddonManifest.TARGET_DIRECTORY)
             if (existingTarget != null && !existingTarget.isDirectory) {
-                return InstallResult.Failure("Path exists and is not a directory: ${AddonManifest.TARGET_DIRECTORY}")
+                return InstallResult.Failure(
+                    "Path exists and is not a directory: ${AddonManifest.TARGET_DIRECTORY}",
+                )
             }
 
             if (existingTarget != null && !replaceExisting) {
@@ -99,11 +158,16 @@ class GodotProjectRepository(private val context: Context) {
                 null
             }
 
-            val target = existingTarget ?: addons.createDirectory(AddonManifest.TARGET_DIRECTORY)
-                ?: return InstallResult.Failure("Unable to create addon directory")
+            val target = existingTarget ?: addons.createDirectory(
+                AddonManifest.TARGET_DIRECTORY,
+            ) ?: return InstallResult.Failure("Unable to create addon directory")
 
             AddonManifest.files.forEach { addonAsset ->
-                val targetFile = ensureFile(target, addonAsset.fileName, addonAsset.mimeType)
+                val targetFile = ensureFile(
+                    target,
+                    addonAsset.fileName,
+                    addonAsset.mimeType,
+                )
                 val assetPath = "${AddonManifest.ASSET_ROOT}/${addonAsset.fileName}"
                 context.assets.open(assetPath).use { input ->
                     openTruncatingOutput(targetFile.uri).use { output ->
@@ -112,9 +176,74 @@ class GodotProjectRepository(private val context: Context) {
                 }
             }
 
-            val missingFile = AddonManifest.files.firstOrNull { target.findFile(it.fileName)?.isFile != true }
+            val missingFile = AddonManifest.files.firstOrNull {
+                target.findFile(it.fileName)?.isFile != true
+            }
             if (missingFile != null) {
-                return InstallResult.Failure("Installed file is missing: ${missingFile.fileName}")
+                return InstallResult.Failure(
+                    "Installed file is missing: ${missingFile.fileName}",
+                )
+            }
+
+            InstallResult.Success(backupName)
+        } catch (error: Exception) {
+            InstallResult.Failure(error.message)
+        }
+    }
+
+    fun install(rootDirectory: File, replaceExisting: Boolean): InstallResult {
+        val inspection = inspect(rootDirectory)
+        if (!inspection.isValid) {
+            return InstallResult.Failure(inspection.technicalMessage ?: inspection.code.name)
+        }
+
+        return try {
+            val root = rootDirectory.canonicalFile
+            val addons = ensureDirectory(root, AddonManifest.ADDONS_DIRECTORY, root)
+            val existingTarget = safeChild(addons, AddonManifest.TARGET_DIRECTORY)
+
+            if (existingTarget.exists() && !existingTarget.isDirectory) {
+                return InstallResult.Failure(
+                    "Path exists and is not a directory: ${AddonManifest.TARGET_DIRECTORY}",
+                )
+            }
+
+            if (existingTarget.exists() && !replaceExisting) {
+                return InstallResult.ConfirmationRequired
+            }
+
+            val backupName = if (existingTarget.exists()) {
+                val name = uniqueBackupName(addons)
+                val backupDirectory = ensureDirectory(addons, name, root)
+                copyDirectory(existingTarget, backupDirectory, root)
+                name
+            } else {
+                null
+            }
+
+            val target = if (existingTarget.exists()) {
+                existingTarget
+            } else {
+                ensureDirectory(addons, AddonManifest.TARGET_DIRECTORY, root)
+            }
+
+            AddonManifest.files.forEach { addonAsset ->
+                val targetFile = ensureFile(target, addonAsset.fileName, root)
+                val assetPath = "${AddonManifest.ASSET_ROOT}/${addonAsset.fileName}"
+                context.assets.open(assetPath).use { input ->
+                    FileOutputStream(targetFile, false).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+
+            val missingFile = AddonManifest.files.firstOrNull {
+                !safeChild(target, it.fileName).isFile
+            }
+            if (missingFile != null) {
+                return InstallResult.Failure(
+                    "Installed file is missing: ${missingFile.fileName}",
+                )
             }
 
             InstallResult.Success(backupName)
@@ -127,27 +256,67 @@ class GodotProjectRepository(private val context: Context) {
         require(isSafeName(name)) { "Unsafe directory name" }
         val existing = parent.findFile(name)
         if (existing != null) {
-            if (!existing.isDirectory) throw IOException("Path exists and is not a directory: $name")
+            if (!existing.isDirectory) {
+                throw IOException("Path exists and is not a directory: $name")
+            }
             return existing
         }
         return parent.createDirectory(name)
             ?: throw IOException("Unable to create directory: $name")
     }
 
-    private fun ensureFile(parent: DocumentFile, name: String, mimeType: String): DocumentFile {
+    private fun ensureFile(
+        parent: DocumentFile,
+        name: String,
+        mimeType: String,
+    ): DocumentFile {
         require(isSafeName(name)) { "Unsafe file name" }
         val existing = parent.findFile(name)
         if (existing != null) {
-            if (!existing.isFile) throw IOException("Path exists and is not a file: $name")
+            if (!existing.isFile) {
+                throw IOException("Path exists and is not a file: $name")
+            }
             return existing
         }
 
         val created = parent.createFile(mimeType, name)
             ?: throw IOException("Unable to create file: $name")
         if (created.name != name) {
-            throw IOException("Storage provider changed required file name from $name to ${created.name}")
+            throw IOException(
+                "Storage provider changed required file name from $name to ${created.name}",
+            )
         }
         return created
+    }
+
+    private fun ensureDirectory(parent: File, name: String, root: File): File {
+        val directory = safeChild(parent, name)
+        requireInsideRoot(directory, root)
+        if (directory.exists()) {
+            if (!directory.isDirectory) {
+                throw IOException("Path exists and is not a directory: $name")
+            }
+            return directory
+        }
+        if (!directory.mkdir()) {
+            throw IOException("Unable to create directory: $name")
+        }
+        return directory
+    }
+
+    private fun ensureFile(parent: File, name: String, root: File): File {
+        val file = safeChild(parent, name)
+        requireInsideRoot(file, root)
+        if (file.exists()) {
+            if (!file.isFile) {
+                throw IOException("Path exists and is not a file: $name")
+            }
+            return file
+        }
+        if (!file.createNewFile()) {
+            throw IOException("Unable to create file: $name")
+        }
+        return file
     }
 
     private fun copyDirectory(source: DocumentFile, destination: DocumentFile) {
@@ -171,6 +340,40 @@ class GodotProjectRepository(private val context: Context) {
                     if (input == null) throw IOException("Unable to read file: $name")
                     openTruncatingOutput(destinationFile.uri).use { output ->
                         input.copyTo(output)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun copyDirectory(source: File, destination: File, root: File) {
+        val children = source.listFiles()
+            ?: throw IOException("Unable to list source directory: ${source.absolutePath}")
+
+        children.forEach { child ->
+            if (Files.isSymbolicLink(child.toPath())) {
+                throw IOException("Symbolic links are not copied: ${child.name}")
+            }
+            if (!isSafeName(child.name)) {
+                throw IOException("Unsafe source item name: ${child.name}")
+            }
+
+            val destinationChild = safeChild(destination, child.name)
+            requireInsideRoot(destinationChild, root)
+
+            when {
+                child.isDirectory -> {
+                    if (!destinationChild.mkdir()) {
+                        throw IOException("Unable to back up directory: ${child.name}")
+                    }
+                    copyDirectory(child, destinationChild, root)
+                }
+
+                child.isFile -> {
+                    FileInputStream(child).use { input ->
+                        FileOutputStream(destinationChild, false).use { output ->
+                            input.copyTo(output)
+                        }
                     }
                 }
             }
@@ -205,7 +408,46 @@ class GodotProjectRepository(private val context: Context) {
         return candidate
     }
 
+    private fun uniqueBackupName(addons: File): String {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val base = "${AddonManifest.TARGET_DIRECTORY}_backup_$stamp"
+        var candidate = base
+        var counter = 1
+        while (safeChild(addons, candidate).exists()) {
+            candidate = "${base}_$counter"
+            counter += 1
+        }
+        return candidate
+    }
+
+    private fun safeChild(parent: File, name: String): File {
+        require(isSafeName(name)) { "Unsafe path name: $name" }
+        val canonicalParent = parent.canonicalFile
+        val canonicalChild = File(canonicalParent, name).canonicalFile
+        val prefix = canonicalParent.path.trimEnd(File.separatorChar) + File.separator
+        if (canonicalChild.path != canonicalParent.path &&
+            !canonicalChild.path.startsWith(prefix)
+        ) {
+            throw SecurityException("Path escapes the selected project directory")
+        }
+        return canonicalChild
+    }
+
+    private fun requireInsideRoot(file: File, root: File) {
+        val canonicalRoot = root.canonicalFile
+        val canonicalFile = file.canonicalFile
+        val prefix = canonicalRoot.path.trimEnd(File.separatorChar) + File.separator
+        if (canonicalFile.path != canonicalRoot.path &&
+            !canonicalFile.path.startsWith(prefix)
+        ) {
+            throw SecurityException("Path escapes the selected project directory")
+        }
+    }
+
     private fun isSafeName(name: String): Boolean =
-        name.isNotBlank() && name != "." && name != ".." &&
-            !name.contains('/') && !name.contains('\\')
+        name.isNotBlank() &&
+            name != "." &&
+            name != ".." &&
+            !name.contains('/') &&
+            !name.contains('\\')
 }

@@ -2,25 +2,42 @@
 <resources>
     <string name="app_name">GodotForge Installer</string>
     <string name="hero_title">تثبيت إضافة GodotForge AI</string>
-    <string name="hero_description">اختر المجلد الجذر لمشروع Godot. يتحقق التطبيق من وجود project.godot، ثم يكتب فقط داخل addons/godotforge_ai.</string>
+    <string name="hero_description">اختر مشروع Godot بمنتقي مجلدات Android، أو امنح وصولًا شاملًا اختياريًا وأدخل المسار المباشر. يتحقق التطبيق من project.godot ويكتب داخل المشروع المحدد فقط.</string>
+
+    <string name="full_access_title">الوصول الشامل إلى التخزين</string>
+    <string name="full_access_description">وضع اختياري لاستخدام المسارات المباشرة في التخزين المشترك. يظل Android مانعًا لمجلدات Android/data الخاصة بالتطبيقات الأخرى.</string>
+    <string name="full_access_granted">تم تفعيل الوصول الشامل إلى التخزين.</string>
+    <string name="full_access_not_granted">الوصول الشامل إلى التخزين غير مفعّل.</string>
+    <string name="grant_full_access">منح الوصول الشامل</string>
+    <string name="manage_full_access">إدارة الوصول الشامل</string>
+    <string name="full_access_required_title">الوصول الشامل مطلوب</string>
+    <string name="full_access_required_message">فعّل خيار «السماح بالوصول لإدارة جميع الملفات» في إعدادات Android، ثم ارجع إلى التطبيق.</string>
+
     <string name="selected_folder_label">مجلد المشروع المحدد</string>
     <string name="no_folder_selected">لم يتم اختيار مجلد</string>
-    <string name="choose_folder">اختيار مشروع Godot</string>
+    <string name="choose_folder">الاختيار بمنتقي مجلدات Android</string>
+    <string name="choose_path_directly">إدخال مسار المشروع مباشرة</string>
+    <string name="direct_path_dialog_title">مسار مشروع Godot المباشر</string>
+    <string name="direct_path_dialog_message">أدخل المسار المطلق للمجلد الذي يحتوي مباشرة على project.godot.</string>
+    <string name="direct_path_hint">/storage/emulated/0/Documents/MyGame</string>
+    <string name="use_path">استخدام المسار</string>
     <string name="recheck">إعادة الفحص</string>
     <string name="install_addon">تثبيت الإضافة</string>
     <string name="reinstall_addon">نسخ احتياطي وإعادة التثبيت</string>
-    <string name="security_note">دون Root · دون صلاحية تخزين شاملة · دون مفاتيح API مضمّنة</string>
+    <string name="security_note">دون Root · الوصول الشامل اختياري وتحت تحكم المستخدم · الكتابة داخل المشروع المحدد فقط · دون مفاتيح API مضمّنة</string>
 
     <string name="status_choose_folder">اختر مجلد مشروع Godot للبدء.</string>
     <string name="status_checking">جارٍ فحص المجلد المحدد…</string>
     <string name="status_valid_project">تم العثور على مشروع Godot صالح. جاهز للتثبيت.</string>
     <string name="status_valid_existing">تم العثور على مشروع صالح، والإضافة موجودة مسبقًا. ستُنشأ نسخة احتياطية قبل إعادة التثبيت.</string>
     <string name="status_invalid_tree">الموقع المحدد ليس مجلدًا متاحًا للتطبيق.</string>
+    <string name="status_invalid_path">المسار غير صالح. أدخل مسار مجلد مطلقًا.</string>
+    <string name="status_full_access_required">يلزم الوصول الشامل لاستخدام المسار المباشر. فعّله من إعدادات Android.</string>
     <string name="status_missing_project_file">لم يُعثر على project.godot مباشرة داخل المجلد المحدد.</string>
     <string name="status_not_writable">المجلد المحدد للقراءة فقط. اختر مجلد مشروع قابلًا للكتابة.</string>
     <string name="status_addons_is_file">يوجد ملف باسم addons يمنع التثبيت. أعد تسميته يدويًا ثم أعد الفحص.</string>
     <string name="status_target_is_file">يوجد ملف باسم addons/godotforge_ai يمنع التثبيت. أعد تسميته يدويًا؛ التطبيق لن يحذفه.</string>
-    <string name="status_access_revoked">أُلغي الوصول إلى المجلد. اختر مجلد المشروع من جديد.</string>
+    <string name="status_access_revoked">أُلغي الوصول إلى المجلد أو يمنع Android هذا الموقع.</string>
     <string name="status_unknown_error">تعذر فحص المشروع: %1$s</string>
     <string name="status_permission_failed">لم يمنح Android وصولًا دائمًا للقراءة والكتابة إلى هذا المجلد.</string>
     <string name="status_installing">جارٍ تثبيت الإضافة…</string>

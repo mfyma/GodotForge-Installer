@@ -13,6 +13,7 @@ import com.godotforge.installer.data.ProjectSelectionStore
 import com.godotforge.installer.domain.InspectionCode
 import com.godotforge.installer.domain.InstallResult
 import com.godotforge.installer.domain.ProjectInspection
+import java.io.File
 import java.util.concurrent.Executors
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -27,31 +28,99 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: LiveData<InstallerUiState> = _uiState
 
     init {
-        selectionStore.load()?.let(::inspect)
+        val storedPath = selectionStore.loadPath()
+        if (!storedPath.isNullOrBlank()) {
+            _uiState.value = _uiState.value?.copy(
+                selectedPath = storedPath,
+                folderDisplayName = File(storedPath).name,
+                statusText = application.getString(R.string.status_full_access_required),
+                statusLevel = StatusLevel.INFO,
+            )
+        } else {
+            selectionStore.loadUri()?.let(::inspectUri)
+        }
+    }
+
+    fun updateFullStorageAccess(granted: Boolean) {
+        val current = _uiState.value ?: InstallerUiState()
+        val changed = current.fullStorageAccessGranted != granted
+
+        if (!granted && current.selectedPath != null) {
+            _uiState.value = current.copy(
+                fullStorageAccessGranted = false,
+                isProjectValid = false,
+                addonExists = false,
+                statusText = getApplication<Application>().getString(
+                    R.string.status_full_access_required,
+                ),
+                statusLevel = StatusLevel.ERROR,
+            )
+            return
+        }
+
+        _uiState.value = current.copy(fullStorageAccessGranted = granted)
+        if (granted && current.selectedPath != null && (changed || !current.isProjectValid)) {
+            inspectPath(current.selectedPath)
+        }
     }
 
     fun selectFolder(uri: Uri) {
         val persistResult = repository.persistAccess(uri)
         if (persistResult.isFailure) {
-            _uiState.value = InstallerUiState(
+            val current = _uiState.value ?: InstallerUiState()
+            _uiState.value = current.copy(
                 selectedUri = uri,
-                statusText = getApplication<Application>().getString(R.string.status_permission_failed),
+                selectedPath = null,
+                statusText = getApplication<Application>().getString(
+                    R.string.status_permission_failed,
+                ),
                 statusLevel = StatusLevel.ERROR,
             )
             return
         }
 
         selectionStore.save(uri)
-        inspect(uri)
+        inspectUri(uri)
+    }
+
+    fun selectPath(rawPath: String) {
+        val current = _uiState.value ?: InstallerUiState()
+        if (!current.fullStorageAccessGranted) {
+            _uiState.value = current.copy(
+                statusText = getApplication<Application>().getString(
+                    R.string.status_full_access_required,
+                ),
+                statusLevel = StatusLevel.ERROR,
+            )
+            return
+        }
+
+        val canonicalPath = try {
+            val file = File(rawPath.trim())
+            if (!file.isAbsolute) throw IllegalArgumentException("Path must be absolute")
+            file.canonicalPath
+        } catch (_: Exception) {
+            _uiState.value = current.copy(
+                statusText = getApplication<Application>().getString(R.string.status_invalid_path),
+                statusLevel = StatusLevel.ERROR,
+            )
+            return
+        }
+
+        selectionStore.savePath(canonicalPath)
+        inspectPath(canonicalPath)
     }
 
     fun refresh() {
-        _uiState.value?.selectedUri?.let(::inspect)
+        val current = _uiState.value ?: return
+        when {
+            current.selectedPath != null -> inspectPath(current.selectedPath)
+            current.selectedUri != null -> inspectUri(current.selectedUri)
+        }
     }
 
     fun installAddon(replaceExisting: Boolean) {
         val current = _uiState.value ?: return
-        val uri = current.selectedUri ?: return
         if (!current.isProjectValid || current.isBusy) return
 
         _uiState.value = current.copy(
@@ -61,7 +130,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         executor.execute {
-            val result = repository.install(uri, replaceExisting)
+            val result = when {
+                current.selectedPath != null -> repository.install(
+                    File(current.selectedPath),
+                    replaceExisting,
+                )
+                current.selectedUri != null -> repository.install(
+                    current.selectedUri,
+                    replaceExisting,
+                )
+                else -> InstallResult.Failure("No project selected")
+            }
+
             mainHandler.post {
                 val latest = _uiState.value ?: current
                 when (result) {
@@ -71,7 +151,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 R.string.status_install_success_with_backup,
                                 backupName,
                             )
-                        } ?: getApplication<Application>().getString(R.string.status_install_success)
+                        } ?: getApplication<Application>().getString(
+                            R.string.status_install_success,
+                        )
 
                         _uiState.value = latest.copy(
                             isBusy = false,
@@ -111,10 +193,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun inspect(uri: Uri) {
+    private fun inspectUri(uri: Uri) {
         val previous = _uiState.value ?: InstallerUiState()
         _uiState.value = previous.copy(
             selectedUri = uri,
+            selectedPath = null,
             isBusy = true,
             isProjectValid = false,
             addonExists = false,
@@ -125,21 +208,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         executor.execute {
             val inspection = repository.inspect(uri)
             mainHandler.post {
-                _uiState.value = inspection.toUiState(uri)
+                _uiState.value = inspection.toUiState(uri = uri)
             }
         }
     }
 
-    private fun ProjectInspection.toUiState(uri: Uri): InstallerUiState {
+    private fun inspectPath(path: String) {
+        val previous = _uiState.value ?: InstallerUiState()
+        if (!previous.fullStorageAccessGranted) {
+            _uiState.value = previous.copy(
+                selectedUri = null,
+                selectedPath = path,
+                isProjectValid = false,
+                addonExists = false,
+                statusText = getApplication<Application>().getString(
+                    R.string.status_full_access_required,
+                ),
+                statusLevel = StatusLevel.ERROR,
+            )
+            return
+        }
+
+        _uiState.value = previous.copy(
+            selectedUri = null,
+            selectedPath = path,
+            isBusy = true,
+            isProjectValid = false,
+            addonExists = false,
+            statusText = getApplication<Application>().getString(R.string.status_checking),
+            statusLevel = StatusLevel.INFO,
+        )
+
+        executor.execute {
+            val inspection = repository.inspect(File(path))
+            mainHandler.post {
+                _uiState.value = inspection.toUiState(path = path)
+            }
+        }
+    }
+
+    private fun ProjectInspection.toUiState(
+        uri: Uri? = null,
+        path: String? = null,
+    ): InstallerUiState {
         val app = getApplication<Application>()
         val text = when (code) {
             InspectionCode.VALID_NEW -> app.getString(R.string.status_valid_project)
             InspectionCode.VALID_EXISTING -> app.getString(R.string.status_valid_existing)
             InspectionCode.INVALID_TREE -> app.getString(R.string.status_invalid_tree)
-            InspectionCode.MISSING_PROJECT_FILE -> app.getString(R.string.status_missing_project_file)
+            InspectionCode.MISSING_PROJECT_FILE -> app.getString(
+                R.string.status_missing_project_file,
+            )
             InspectionCode.NOT_WRITABLE -> app.getString(R.string.status_not_writable)
-            InspectionCode.ADDONS_PATH_IS_FILE -> app.getString(R.string.status_addons_is_file)
-            InspectionCode.TARGET_PATH_IS_FILE -> app.getString(R.string.status_target_is_file)
+            InspectionCode.ADDONS_PATH_IS_FILE -> app.getString(
+                R.string.status_addons_is_file,
+            )
+            InspectionCode.TARGET_PATH_IS_FILE -> app.getString(
+                R.string.status_target_is_file,
+            )
             InspectionCode.ACCESS_REVOKED -> app.getString(R.string.status_access_revoked)
             InspectionCode.UNKNOWN_ERROR -> app.getString(
                 R.string.status_unknown_error,
@@ -149,7 +275,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val level = when (code) {
             InspectionCode.VALID_NEW,
-            InspectionCode.VALID_EXISTING -> StatusLevel.SUCCESS
+            InspectionCode.VALID_EXISTING,
+            -> StatusLevel.SUCCESS
 
             InspectionCode.INVALID_TREE,
             InspectionCode.MISSING_PROJECT_FILE,
@@ -157,17 +284,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             InspectionCode.ADDONS_PATH_IS_FILE,
             InspectionCode.TARGET_PATH_IS_FILE,
             InspectionCode.ACCESS_REVOKED,
-            InspectionCode.UNKNOWN_ERROR -> StatusLevel.ERROR
+            InspectionCode.UNKNOWN_ERROR,
+            -> StatusLevel.ERROR
         }
 
         return InstallerUiState(
             selectedUri = uri,
+            selectedPath = path,
             folderDisplayName = displayName,
             statusText = text,
             statusLevel = level,
             isBusy = false,
             isProjectValid = isValid,
             addonExists = addonExists,
+            fullStorageAccessGranted = _uiState.value?.fullStorageAccessGranted == true,
         )
     }
 

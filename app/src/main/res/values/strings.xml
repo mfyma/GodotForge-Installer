@@ -2,25 +2,42 @@
 <resources>
     <string name="app_name">GodotForge Installer</string>
     <string name="hero_title">Install the GodotForge AI addon</string>
-    <string name="hero_description">Select the root folder of a Godot project. The installer verifies project.godot, then writes only inside addons/godotforge_ai.</string>
+    <string name="hero_description">Select a Godot project with Android’s folder picker, or grant optional all-files access and enter its direct path. The installer verifies project.godot and writes only inside the selected project.</string>
+
+    <string name="full_access_title">Full storage access</string>
+    <string name="full_access_description">Optional mode for direct paths in shared storage. Android still blocks other apps’ private Android/data directories.</string>
+    <string name="full_access_granted">Full storage access is enabled.</string>
+    <string name="full_access_not_granted">Full storage access is not enabled.</string>
+    <string name="grant_full_access">Grant full access</string>
+    <string name="manage_full_access">Manage full access</string>
+    <string name="full_access_required_title">Full access required</string>
+    <string name="full_access_required_message">Enable “Allow access to manage all files” in Android settings, then return to the installer.</string>
+
     <string name="selected_folder_label">Selected project folder</string>
     <string name="no_folder_selected">No folder selected</string>
-    <string name="choose_folder">Choose Godot project</string>
+    <string name="choose_folder">Choose with Android folder picker</string>
+    <string name="choose_path_directly">Enter direct project path</string>
+    <string name="direct_path_dialog_title">Direct Godot project path</string>
+    <string name="direct_path_dialog_message">Enter the absolute path of the folder that directly contains project.godot.</string>
+    <string name="direct_path_hint">/storage/emulated/0/Documents/MyGame</string>
+    <string name="use_path">Use path</string>
     <string name="recheck">Recheck</string>
     <string name="install_addon">Install addon</string>
     <string name="reinstall_addon">Back up and reinstall</string>
-    <string name="security_note">No root access · No broad storage permission · No API keys bundled</string>
+    <string name="security_note">No root access · Full access is optional and user-controlled · Writes stay inside the selected project · No API keys bundled</string>
 
     <string name="status_choose_folder">Choose a Godot project folder to begin.</string>
     <string name="status_checking">Checking the selected folder…</string>
     <string name="status_valid_project">Valid Godot project found. Ready to install.</string>
     <string name="status_valid_existing">Valid Godot project found. The addon already exists; reinstalling will create a backup first.</string>
     <string name="status_invalid_tree">The selected location is not an accessible folder.</string>
+    <string name="status_invalid_path">The path is invalid. Enter an absolute folder path.</string>
+    <string name="status_full_access_required">Full storage access is required for a direct path. Enable it in Android settings.</string>
     <string name="status_missing_project_file">project.godot was not found directly inside the selected folder.</string>
     <string name="status_not_writable">The selected folder is read-only. Choose a writable project folder.</string>
     <string name="status_addons_is_file">A file named addons blocks installation. Rename it manually, then recheck.</string>
     <string name="status_target_is_file">A file named addons/godotforge_ai blocks installation. Rename it manually; the installer will not delete it.</string>
-    <string name="status_access_revoked">Folder access was revoked. Choose the project folder again.</string>
+    <string name="status_access_revoked">Folder access was revoked or Android blocks this location.</string>
     <string name="status_unknown_error">Could not inspect the project: %1$s</string>
     <string name="status_permission_failed">Android did not grant persistent read/write access to this folder.</string>
     <string name="status_installing">Installing the addon…</string>
